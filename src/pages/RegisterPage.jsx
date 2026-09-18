@@ -71,7 +71,7 @@ const RegisterPage = () => {
     setIsLoading(false);
 
     if (result.success) {
-      navigate('/dashboard');
+      navigate('/login');
     } else {
       setErrors((prev) => ({ ...prev, submit: result.error || 'Registration failed' }));
     }

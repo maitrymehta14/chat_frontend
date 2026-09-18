@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { loginUser, registerUser, getMe } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -12,6 +13,28 @@ export const AuthProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Sync profile data from server on load if token exists
+  useEffect(() => {
+    if (!token) return;
+    getMe()
+      .then((res) => {
+        if (res.success && res.user) {
+          const userObj = {
+            id: res.user.id || res.user._id,
+            name: res.user.user_name,
+            email: res.user.email,
+            lastLogin: res.user.lastLogin || null,
+            lastSeen: res.user.lastSeen || null,
+          };
+          localStorage.setItem('nexus_user', JSON.stringify(userObj));
+          setUser(userObj);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to refresh profile via getMe:', err.message);
+      });
+  }, [token]);
+
   const login = async (email, password) => {
     if (!email || !password) {
       return { success: false, error: 'Email and password are required' };
@@ -19,20 +42,29 @@ export const AuthProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      // Mock login request delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      const mockToken = 'mock_jwt_token_header.payload.signature';
-      const mockUser = { id: 1, name: 'John Doe', email };
+      const res = await loginUser(email, password);
+      if (res.success && res.token && res.user) {
+        const userObj = {
+          id: res.user.id || res.user._id,
+          name: res.user.user_name,
+          email: res.user.email,
+          lastLogin: res.user.lastLogin || null,
+          lastSeen: res.user.lastSeen || null,
+        };
 
-      localStorage.setItem('nexus_token', mockToken);
-      localStorage.setItem('nexus_user', JSON.stringify(mockUser));
+        localStorage.setItem('nexus_token', res.token);
+        localStorage.setItem('nexus_user', JSON.stringify(userObj));
 
-      setToken(mockToken);
-      setUser(mockUser);
-      return { success: true };
-    } catch {
-      return { success: false, error: 'Authentication failed' };
+        setToken(res.token);
+        setUser(userObj);
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Authentication failed' };
+    } catch (err) {
+      return { 
+        success: false, 
+        error: err.response?.data?.message || err.message || 'Authentication failed' 
+      };
     } finally {
       setLoading(false);
     }
@@ -45,20 +77,16 @@ export const AuthProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      // Mock register request delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const mockToken = 'mock_jwt_token_header.payload.signature';
-      const mockUser = { id: 1, name, email };
-
-      localStorage.setItem('nexus_token', mockToken);
-      localStorage.setItem('nexus_user', JSON.stringify(mockUser));
-
-      setToken(mockToken);
-      setUser(mockUser);
-      return { success: true };
-    } catch {
-      return { success: false, error: 'Registration failed' };
+      const res = await registerUser(name, email, password);
+      if (res.success) {
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Registration failed' };
+    } catch (err) {
+      return { 
+        success: false, 
+        error: err.response?.data?.message || err.message || 'Registration failed' 
+      };
     } finally {
       setLoading(false);
     }

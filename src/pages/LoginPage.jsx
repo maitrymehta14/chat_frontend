@@ -15,7 +15,7 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const from = location.state?.from?.pathname || '/users';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -79,6 +79,7 @@ const LoginPage = () => {
               {errors.submit}
             </div>
           )}
+
           <Input
             label="Email Address"
             name="email"
